@@ -1,0 +1,37 @@
+/* Custom font classes */
+.font-heading {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 900;
+}
+
+.font-body {
+  font-family: 'Satoshi', sans-serif;
+}
+
+.font-data {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Remove center alignment */
+.App {
+  min-height: 100vh;
+}
+
+/* Smooth transitions for interactive elements */
+input:focus {
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+button {
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+/* Progress bar animation */
+.progress-fill {
+  transition: width 300ms ease-out;
+}
+
+/* Table row hover */
+.table-row-hover:hover {
+  transition: background-color 150ms ease-out;
+}
