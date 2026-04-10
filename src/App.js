@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import "@/App.css";
-import { Users, Lightbulb, RefreshCw, TrendingUp, AlertTriangle, TrendingDown } from "lucide-react";
+import { Users, Lightbulb, RefreshCw, TrendingUp, AlertTriangle, TrendingDown, Activity, CheckCircle, XCircle, Zap } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 // ========================================
@@ -62,14 +62,14 @@ const presetScenarios = {
         { day: "Day 4", utilization: 65 },
         { day: "Day 5", utilization: 70 },
         { day: "Day 6", utilization: 95 },
-        { day: "Day 7", utilization: 135 },
+        { day: "Day 7", utilization: 162.5 },
       ],
     },
   },
   skillMismatch: {
     employees: [
       { id: "emp1", name: "Rahul Kumar", workHours: 14, capacity: 8 },
-      { id: "emp2", name: "Priya Singh", workHours: 1, capacity: 8 },
+      { id: "emp2", name: "Priya Singh", workHours: 0, capacity: 8 },
       { id: "emp3", name: "Alex Chen", workHours: 7, capacity: 8 },
       { id: "emp4", name: "Maria Garcia", workHours: 6, capacity: 8 },
       { id: "emp5", name: "John Smith", workHours: 8, capacity: 8 },
@@ -83,8 +83,8 @@ const presetScenarios = {
         { day: "Day 3", rahul: 165, priya: 8 },
         { day: "Day 4", rahul: 170, priya: 15 },
         { day: "Day 5", rahul: 172, priya: 10 },
-        { day: "Day 6", rahul: 175, priya: 12 },
-        { day: "Day 7", rahul: 175, priya: 12.5 },
+        { day: "Day 6", rahul: 175, priya: 5 },
+        { day: "Day 7", rahul: 175, priya: 0 },
       ],
     },
   },
@@ -186,7 +186,7 @@ const detectCase = (employees, teamUtilization, history) => {
         return {
           caseType: "edge_skill_mismatch",
           insight: "Persistent imbalance suggests skill mismatch",
-          action: "Reassign tasks based on skill or upskill idle employee",
+          action: `Reassign tasks based on skill or upskill ${idlePerson.name} (idle employee)`,
           icon: AlertTriangle,
           showChart: true,
           chartType: "employeeComparison",
@@ -440,6 +440,17 @@ function App() {
     if (teamUtilization < 70) teamStatus = "underutilized";
     if (teamUtilization > 100) teamStatus = "overutilized";
 
+    // Count employees by status
+    const statusCounts = employees.reduce(
+      (acc, emp) => {
+        const utilization = calculateUtilization(emp.workHours, emp.capacity);
+        const status = getStatus(utilization);
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      },
+      { idle: 0, underutilized: 0, balanced: 0, overutilized: 0 }
+    );
+
     // Detect case and generate insight/action
     const detectedCase = detectCase(employees, teamUtilization, history);
 
@@ -448,6 +459,7 @@ function App() {
       totalCapacity,
       teamUtilization,
       teamStatus,
+      statusCounts,
       detectedCase,
     };
   }, [employees, history, isEdgeCaseMode, frozenCase]);
@@ -487,11 +499,23 @@ function App() {
       if (teamUtilization > 100) teamStatus = "overutilized";
       const detectedCase = detectCase(preset.employees, teamUtilization, preset.history);
       
+      // Calculate status counts for frozen state
+      const statusCounts = preset.employees.reduce(
+        (acc, emp) => {
+          const utilization = calculateUtilization(emp.workHours, emp.capacity);
+          const status = getStatus(utilization);
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        },
+        { idle: 0, underutilized: 0, balanced: 0, overutilized: 0 }
+      );
+      
       setFrozenCase({
         totalWorkHours,
         totalCapacity,
         teamUtilization,
         teamStatus,
+        statusCounts,
         detectedCase,
       });
     } else {
@@ -543,52 +567,52 @@ function App() {
               <div className="flex flex-col gap-1.5" data-testid="preset-buttons-container">
                 <button
                   onClick={() => loadPreset("underutilized")}
-                  className={`bg-white text-zinc-950 border border-zinc-200 px-2 py-1.5 text-[10px] font-medium hover:bg-zinc-50 transition-colors text-left ${
-                    activePreset === "underutilized" ? "bg-zinc-100" : ""
+                  className={`bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1.5 text-[11px] font-medium hover:bg-blue-100 transition-colors text-left ${
+                    activePreset === "underutilized" ? "bg-blue-100" : ""
                   }`}
                   data-testid="preset-underutilized-button"
                 >
-                  <RefreshCw className="inline w-3 h-3 mr-1" />
+                  <TrendingDown className="inline w-3 h-3 mr-1" />
                   Underutilized
                 </button>
                 <button
                   onClick={() => loadPreset("balanced")}
-                  className={`bg-white text-zinc-950 border border-zinc-200 px-2 py-1.5 text-[10px] font-medium hover:bg-zinc-50 transition-colors text-left ${
-                    activePreset === "balanced" ? "bg-zinc-100" : ""
+                  className={`bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1.5 text-[11px] font-medium hover:bg-emerald-100 transition-colors text-left ${
+                    activePreset === "balanced" ? "bg-emerald-100" : ""
                   }`}
                   data-testid="preset-balanced-button"
                 >
-                  <RefreshCw className="inline w-3 h-3 mr-1" />
+                  <CheckCircle className="inline w-3 h-3 mr-1" />
                   Balanced
                 </button>
                 <button
                   onClick={() => loadPreset("overutilized")}
-                  className={`bg-white text-zinc-950 border border-zinc-200 px-2 py-1.5 text-[10px] font-medium hover:bg-zinc-50 transition-colors text-left ${
-                    activePreset === "overutilized" ? "bg-zinc-100" : ""
+                  className={`bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1.5 text-[11px] font-medium hover:bg-rose-100 transition-colors text-left ${
+                    activePreset === "overutilized" ? "bg-rose-100" : ""
                   }`}
                   data-testid="preset-overutilized-button"
                 >
-                  <RefreshCw className="inline w-3 h-3 mr-1" />
+                  <XCircle className="inline w-3 h-3 mr-1" />
                   Overutilized
                 </button>
                 <button
                   onClick={() => loadPreset("spike")}
-                  className={`bg-white text-zinc-950 border border-zinc-200 px-2 py-1.5 text-[10px] font-medium hover:bg-zinc-50 transition-colors text-left ${
+                  className={`bg-zinc-50 text-zinc-700 border border-zinc-200 px-2 py-1.5 text-[11px] font-medium hover:bg-zinc-100 transition-colors text-left ${
                     activePreset === "spike" ? "bg-zinc-100" : ""
                   }`}
                   data-testid="preset-spike-button"
                 >
-                  <TrendingUp className="inline w-3 h-3 mr-1" />
+                  <Zap className="inline w-3 h-3 mr-1" />
                   Spike
                 </button>
                 <button
                   onClick={() => loadPreset("skillMismatch")}
-                  className={`bg-white text-zinc-950 border border-zinc-200 px-2 py-1.5 text-[10px] font-medium hover:bg-zinc-50 transition-colors text-left ${
+                  className={`bg-zinc-50 text-zinc-700 border border-zinc-200 px-2 py-1.5 text-[11px] font-medium hover:bg-zinc-100 transition-colors text-left ${
                     activePreset === "skillMismatch" ? "bg-zinc-100" : ""
                   }`}
                   data-testid="preset-skill-mismatch-button"
                 >
-                  <AlertTriangle className="inline w-3 h-3 mr-1" />
+                  <Activity className="inline w-3 h-3 mr-1" />
                   Skill Mismatch
                 </button>
               </div>
@@ -596,12 +620,13 @@ function App() {
           </div>
 
           {/* Middle: Team Summary (wider column) */}
-          <div className="col-span-6">
+          <div className="col-span-7">
             <div className="bg-white p-4 border border-zinc-200 h-full" data-testid="team-metrics-container">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 mb-3">
                 Team Summary
               </h2>
-              <div className="grid grid-cols-3 gap-6">
+              {/* First Row: Total Utilization, Team Status, Total Employees */}
+              <div className="grid grid-cols-[1fr_2fr_1fr] gap-4 mb-4">
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-2">
                     Total Utilization
@@ -610,49 +635,88 @@ function App() {
                     {teamMetrics.teamUtilization.toFixed(1)}%
                   </div>
                 </div>
-                <div>
+                <div className="flex flex-col items-center justify-center">
                   <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-2">
                     Team Status
                   </div>
-                  <div className="text-xl font-data tracking-tight text-zinc-950 capitalize" data-testid="team-status-value">
+                  <div 
+                    className={`text-4xl font-data tracking-tight capitalize font-black ${
+                      teamMetrics.teamStatus === 'overutilized' ? 'text-rose-600' :
+                      teamMetrics.teamStatus === 'underutilized' ? 'text-blue-600' :
+                      'text-emerald-600'
+                    }`}
+                    data-testid="team-status-value"
+                  >
                     {teamMetrics.teamStatus}
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-2">
                     <Users className="inline w-4 h-4 mr-1" />
-                    Employees
+                    Total Employees
                   </div>
                   <div className="text-3xl font-data tracking-tight text-zinc-950" data-testid="total-employees-value">
                     {employees.length}
                   </div>
                 </div>
               </div>
+              {/* Second Row: Breakdown spanning full width */}
+              <div className="border-t border-zinc-200 pt-3">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                  Breakdown
+                </div>
+                <div className="flex items-center gap-6">
+                  {teamMetrics.statusCounts.overutilized > 0 && (
+                    <div className="flex items-center gap-2" data-testid="count-overutilized">
+                      <span className="text-2xl font-data text-rose-600 font-bold">{teamMetrics.statusCounts.overutilized}</span>
+                      <span className="text-sm text-zinc-700 uppercase tracking-wide">Overutilized</span>
+                    </div>
+                  )}
+                  {teamMetrics.statusCounts.balanced > 0 && (
+                    <div className="flex items-center gap-2" data-testid="count-balanced">
+                      <span className="text-2xl font-data text-emerald-600 font-bold">{teamMetrics.statusCounts.balanced}</span>
+                      <span className="text-sm text-zinc-700 uppercase tracking-wide">Balanced</span>
+                    </div>
+                  )}
+                  {teamMetrics.statusCounts.underutilized > 0 && (
+                    <div className="flex items-center gap-2" data-testid="count-underutilized">
+                      <span className="text-2xl font-data text-blue-600 font-bold">{teamMetrics.statusCounts.underutilized}</span>
+                      <span className="text-sm text-zinc-700 uppercase tracking-wide">Underutilized</span>
+                    </div>
+                  )}
+                  {teamMetrics.statusCounts.idle > 0 && (
+                    <div className="flex items-center gap-2" data-testid="count-idle">
+                      <span className="text-2xl font-data text-yellow-600 font-bold">{teamMetrics.statusCounts.idle}</span>
+                      <span className="text-sm text-zinc-700 uppercase tracking-wide">Idle</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Rightmost: Insight & Action (compact) */}
-          <div className="col-span-4">
+          <div className="col-span-3">
             <div className="bg-zinc-950 text-white p-4 border border-zinc-900 h-full flex flex-col justify-center">
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
-                  <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 mb-3">
                     Insight
                   </h2>
-                  <div className="flex items-start gap-2">
-                    <InsightIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm leading-snug" data-testid="insight-text">
+                  <div className="flex items-start gap-3">
+                    <InsightIcon className="w-6 h-6 flex-shrink-0 mt-0.5" />
+                    <p className="text-base leading-snug font-medium" data-testid="insight-text">
                       {teamMetrics.detectedCase.insight}
                     </p>
                   </div>
                 </div>
                 <div>
-                  <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2">
+                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 mb-3">
                     Action
                   </h2>
-                  <div className="flex items-start gap-2">
-                    <TrendingDown className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm leading-snug" data-testid="action-text">
+                  <div className="flex items-start gap-3">
+                    <TrendingDown className="w-6 h-6 flex-shrink-0 mt-0.5" />
+                    <p className="text-base leading-snug font-medium" data-testid="action-text">
                       {teamMetrics.detectedCase.action}
                     </p>
                   </div>
@@ -771,8 +835,17 @@ function App() {
                 <ResponsiveContainer width="100%" height={180}>
                   <LineChart data={teamMetrics.detectedCase.chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
-                    <XAxis dataKey="day" stroke="#71717a" style={{ fontSize: "10px" }} />
-                    <YAxis stroke="#71717a" style={{ fontSize: "10px" }} />
+                    <XAxis 
+                      dataKey="day" 
+                      stroke="#71717a" 
+                      style={{ fontSize: "10px" }}
+                      label={{ value: 'Days', position: 'insideBottom', offset: -5, style: { fontSize: '11px', fill: '#52525b' } }}
+                    />
+                    <YAxis 
+                      stroke="#71717a" 
+                      style={{ fontSize: "10px" }}
+                      label={{ value: 'Utilization %', angle: -90, position: 'insideLeft', style: { fontSize: '11px', fill: '#52525b' } }}
+                    />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "#fff",
@@ -807,8 +880,17 @@ function App() {
                 <ResponsiveContainer width="100%" height={180}>
                   <LineChart data={teamMetrics.detectedCase.chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
-                    <XAxis dataKey="day" stroke="#71717a" style={{ fontSize: "10px" }} />
-                    <YAxis stroke="#71717a" style={{ fontSize: "10px" }} />
+                    <XAxis 
+                      dataKey="day" 
+                      stroke="#71717a" 
+                      style={{ fontSize: "10px" }}
+                      label={{ value: 'Days', position: 'insideBottom', offset: -5, style: { fontSize: '11px', fill: '#52525b' } }}
+                    />
+                    <YAxis 
+                      stroke="#71717a" 
+                      style={{ fontSize: "10px" }}
+                      label={{ value: 'Utilization %', angle: -90, position: 'insideLeft', style: { fontSize: '11px', fill: '#52525b' } }}
+                    />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "#fff",
